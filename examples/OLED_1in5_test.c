@@ -31,25 +31,18 @@
 #include "test.h"
 #include "OLED_1in5.h"
 #include <unistd.h>
+#include <stdlib.h>
+#include <time.h>
 
-void printSpecifiedBouncingSquare(UBYTE *BlackImage, int size, int x, int y) {
-	for(int i = 0; i < 40; i++) {
-		Paint_SelectImage(BlackImage);
-        		// Clear only the part of the image where the square was
-        		Paint_DrawRectangle(x + i - 1, y, x + i + size - 1, y + size, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+typedef struct {
+    UBYTE *buffer;
+    int width;
+    int height;
+} Image;
 
-        		// Draw a rectangle at a new position
-        		Paint_DrawRectangle(x + i, y, x + i + size, y + size, WHITE, DOT_PIXEL_1X1, DRAW_FILL_FULL);
-
-        		// Show the updated image
-        		OLED_1in5_Display(BlackImage);
-        		DEV_Delay_ms(1);  // Reduce delay to speed up movement		
-	}
-}
-
-void printBouncingSquare(UBYTE *BlackImage){
-	printSpecifiedBouncingSquare(BlackImage, 10, 50, 30);
-}
+// Function prototypes
+void printBouncingSquare(Image *image);
+void printSpecifiedBouncingSquare(Image *image, int size, int x, int y);
 
 int OLED_1in5_test(void)
 {
@@ -62,26 +55,72 @@ int OLED_1in5_test(void)
 	OLED_1in5_Init();
 	DEV_Delay_ms(500);	
 	// 0.Create a new image cache
-	UBYTE *BlackImage;
+	Image blackImage;
+	blackImage.width = OLED_1in5_WIDTH;
+	blackImage.height = OLED_1in5_HEIGHT;
 	UWORD Imagesize = ((OLED_1in5_WIDTH%2==0)? (OLED_1in5_WIDTH/2): (OLED_1in5_WIDTH/2+1)) * OLED_1in5_HEIGHT;
-	if((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL) {
+	if((blackImage.buffer = (UBYTE *)malloc(Imagesize)) == NULL) {
 			printf("Failed to apply for black memory...\r\n");
 			return -1;
 	}
 	printf("Paint_NewImage\r\n");
-	Paint_NewImage(BlackImage, OLED_1in5_WIDTH, OLED_1in5_HEIGHT, 0, BLACK);	
+	Paint_NewImage(blackImage.buffer, OLED_1in5_WIDTH, OLED_1in5_HEIGHT, 0, BLACK);	
 	Paint_SetScale(16);
 	printf("Drawing\r\n");
 	//1.Select Image
-	Paint_SelectImage(BlackImage);
+	Paint_SelectImage(blackImage.buffer);
 	DEV_Delay_ms(500);
 	Paint_Clear(BLACK);
 		
 	// 2.Drawing on the image		
 	printf("Drawing: Bouncing square\r\n");
 
-	printBouncingSquare(BlackImage);
+	printBouncingSquare(&blackImage);
 	
 	OLED_1in5_Clear();
+	free(blackImage.buffer);
+
 	return 0;
+}
+
+void printSpecifiedBouncingSquare(Image *image, int size, int x, int y) {
+	int xDir = 1;
+	int yDir = 1;
+	int shade = 1;
+
+	while (1) {
+		Paint_SelectImage(image->buffer);
+        		// Clear only the part of the image where the square was
+        		Paint_DrawRectangle(x - xDir, y - yDir, x + size - xDir, y + size -yDir, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+
+        		// Draw a rectangle at a new position
+        		Paint_DrawRectangle(x, y, x + size, y + size, shade, DOT_PIXEL_1X1, DRAW_FILL_FULL);
+
+        		// Show the updated image
+        		OLED_1in5_Display(image->buffer);
+				
+
+				int hitBoundsX = x <= 0 || x >= image->width - size;
+				int hitBoundsY = y <= 0 || y >= image->height - size;
+				if (hitBoundsX) {
+					xDir = -xDir;
+				}
+				if (hitBoundsY) {
+					yDir = -yDir;
+				}
+
+				if (hitBoundsX || hitBoundsY) {
+					shade = (rand() % 15) + 1;
+				}
+
+				// Update the position of the square
+				x += xDir;
+				y += yDir;
+
+        		DEV_Delay_ms(1);  // Reduce delay to speed up movement		
+	}
+}
+
+void printBouncingSquare(Image *image){
+	printSpecifiedBouncingSquare(image, 10, 50, 30);
 }
