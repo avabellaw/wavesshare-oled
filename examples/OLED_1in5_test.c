@@ -88,6 +88,9 @@ void printSpecifiedBouncingSquare(Image *image, int size, int x, int y) {
 	int yDir = 1;
 	int shade = 1;
 
+	// Seed the random number generator
+	srand(time(NULL));
+
 	while (1) {
 		Paint_SelectImage(image->buffer);
         		// Clear only the part of the image where the square was
@@ -110,7 +113,11 @@ void printSpecifiedBouncingSquare(Image *image, int size, int x, int y) {
 				}
 
 				if (hitBoundsX || hitBoundsY) {
-					shade = (rand() % 15) + 1;
+					shade = 16;
+				}
+
+				if (shade > 1) {
+					shade -= 1;
 				}
 
 				// Update the position of the square
